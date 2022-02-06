@@ -1,6 +1,8 @@
 package superlint
 
-import "path/filepath"
+import (
+	"path/filepath"
+)
 
 // FileMatcherFunc describes a function that checks whether a file is relevant to
 // a rule.

@@ -1,6 +1,8 @@
 // Package main contains an evil dog file
 package main
 
-func zebra45() {
+import "crypto/md5"
 
+func zebra45() {
+	_ = md5.New()
 }

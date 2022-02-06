@@ -3,6 +3,7 @@ package main
 import (
 	"go/ast"
 	"os"
+	"regexp"
 	"strings"
 
 	. "github.com/ammario/superlint"
@@ -40,6 +41,20 @@ var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
 				}
 				return true
 			})
+			return nil
+		}),
+		),
+	})
+
+	r.Add(Rule{
+		Name:        "no-md5",
+		FileMatcher: regexp.MustCompile(`\.go$`).MatchString,
+		Validator: Single(lintgo.Validate(func(goFile *ast.File, _ *os.File, report ReportFunc) error {
+			for _, spec := range goFile.Imports {
+				if spec.Path.Value == "\"crypto/md5\"" {
+					report(FileReference{}, "crypto/md5 is insecure")
+				}
+			}
 			return nil
 		}),
 		),
