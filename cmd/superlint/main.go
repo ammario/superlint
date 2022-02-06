@@ -14,11 +14,11 @@ import (
 func main() {
 	var verbose bool
 	rootCmd := &cobra.Command{
-		Use:     "superlint <ruleset plugin> [restrict file glob]",
-		Example: "superlint rules.so ../*.go",
+		Use:     "superlint <ruleset plugin> [file regex]",
+		Example: "superlint rules.so \".go$\"",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var matcher string
+			matcher := "(.*?)"
 			if len(args) == 2 {
 				matcher = args[1]
 			}
@@ -46,6 +46,7 @@ func main() {
 			rn := superlint.Runner{
 				DebugLogger: flog.New(ioutil.Discard),
 				Log:         log,
+				Matcher:     matcher,
 			}
 			if verbose {
 				rn.DebugLogger = log
@@ -53,11 +54,15 @@ func main() {
 			rs := make(superlint.RuleSet, 0, 16)
 			(*loader)(log, &rs)
 			log.Info("loaded %v rules", len(rs))
-			return rn.Run(matcher, &rs)
+			err = rn.Run(&rs)
+			if err != nil {
+				log.Fatal("%+v", err)
+			}
+			return nil
 		},
 	}
 
-	rootCmd.PersistentFlags().BoolVar(&verbose, "v", false, "verbose mode")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose mode")
 
 	err := rootCmd.Execute()
 	if err != nil {
