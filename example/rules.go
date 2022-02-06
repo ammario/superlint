@@ -2,6 +2,7 @@ package main
 
 import (
 	"go/ast"
+	"go/token"
 	"os"
 	"regexp"
 	"strings"
@@ -26,7 +27,7 @@ var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
 	r.Add(Rule{
 		Name:        "no-zebra-functions",
 		FileMatcher: ShellMatch("example/*.go"),
-		Validator: Single(lintgo.Validate(func(goFile *ast.File, _ *os.File, report ReportFunc) error {
+		Validator: Single(lintgo.Validate(func(fset *token.FileSet, goFile *ast.File, _ *os.File, report ReportFunc) error {
 			ast.Inspect(goFile, func(node ast.Node) bool {
 				funcCall, ok := node.(*ast.FuncDecl)
 				if !ok {
@@ -35,7 +36,7 @@ var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
 				funcName := funcCall.Name.Name
 				if strings.Contains(funcName, "zebra") {
 					report(
-						FileReference{Pos: int(node.Pos()), End: int(node.End())},
+						FileReference{Pos: fset.Position(node.Pos()), End: fset.Position(node.End())},
 						"no zebra allowed in a function name",
 					)
 				}
@@ -49,10 +50,13 @@ var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
 	r.Add(Rule{
 		Name:        "no-md5",
 		FileMatcher: regexp.MustCompile(`\.go$`).MatchString,
-		Validator: Single(lintgo.Validate(func(goFile *ast.File, _ *os.File, report ReportFunc) error {
+		Validator: Single(lintgo.Validate(func(fset *token.FileSet, goFile *ast.File, _ *os.File, report ReportFunc) error {
 			for _, spec := range goFile.Imports {
 				if spec.Path.Value == "\"crypto/md5\"" {
-					report(FileReference{}, "crypto/md5 is insecure")
+					report(FileReference{
+						Pos: fset.Position(spec.Path.Pos()),
+						End: fset.Position(spec.Path.End()),
+					}, "crypto/md5 is insecure")
 				}
 			}
 			return nil

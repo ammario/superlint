@@ -3,6 +3,7 @@ package superlint
 import (
 	"fmt"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -41,8 +42,15 @@ func (rn *Runner) runRule(files []string, r Rule) error {
 		matchedFiles[fileName] = fi
 	}
 	return r.Validator(matchedFiles, func(ref FileReference, message string) {
-		fmt.Printf("%v: %v: %v\n", r.Name, ref.Name, message)
 		atomic.AddInt64(&rn.failed, 1)
+
+		fmt.Printf("%v: %v: %v\n", r.Name, ref.Name, message)
+		file, err := ioutil.ReadFile(ref.Name)
+		if err != nil {
+			log.Error("read %v: %v", ref.Name, err)
+			return
+		}
+		prettyPrintReference(os.Stdout, file, ref)
 	})
 }
 
