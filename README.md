@@ -5,14 +5,17 @@
 `superlint` is a linting system configured by user-defined Go code. Instead of a bespoke (and poorly documented) matching
 language, `superlint` lets the user define arbitrary matching and validation functions.
 
-`superlint` rules are **language-agonistic** and run **codebase-wide**. They're fast by default (lazy AST parsing) and
-capable of  encorcing arbitrarily complex rules. A custom rule can create an AST for language-specific analysis.
+`superlint` rules are **language-agonistic** and **codebase-scoped** (as opposed to file-scoped). They're fast by default (lazy AST parsing) and
+capable of  encorcing arbitrarily complex rules.
 
-For example, `superlint` can catch:
+Existing language analysis can be seamlessly interwoven into a `superlint` rulset. For example, a rule can import an AST
+parser or execute a command.
+
+`superlint` can catch many things impossible for other linters:
 * Each Go binary has an accompanying Make entry
 * Each http.Handler has an accompanying test
 * Bash scripts don't exceed 1000 lines of code
-* 
+* TypeScript/JS code is only in the `site` folder
 
 ## Basic Usage
 
