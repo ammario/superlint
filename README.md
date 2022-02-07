@@ -1,5 +1,7 @@
 # superlint
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/ammario/superlint.svg)](https://pkg.go.dev/github.com/ammario/superlint)
+
 `superlint` is a linting system configured by user-defined Go code. Instead of a bespoke (and poorly documented) matching
 language, `superlint` lets the user define arbitrary matching and validation functions.
 
