@@ -77,7 +77,7 @@ var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
 2. Run the rules
 
 ```bash
-$ go build -buildmode=plugin -o rules.so example/rules.go && go run github.com/ammario/superlint/cmd/superlint rules.so
+$ go install ./cmd/superlint && superlint -v example/rules.go
 [18:05:36.552] loaded 2 rules
 no-dog-files: example/dogs.go: no dogs allowed!
 no-md5: example/dogs.go: crypto/md5 is insecure
