@@ -88,6 +88,21 @@ exit status 1
 
 ```
 
+```
+
+2. Run the rules
+
+```bash
+$ go build -buildmode=plugin -o rules.so example/rules.go && go run github.com/ammario/superlint/cmd/superlint rules.so
+[18:05:36.552] loaded 2 rules
+no-dog-files: example/dogs.go: no dogs allowed!
+no-md5: example/dogs.go: crypto/md5 is insecure
+        example/dogs.go:3       import "crypto/md5"
+[18:05:36.560] 2 violations found
+exit status 1
+
+```
+
 
 
 ## Architecture
