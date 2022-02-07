@@ -8,7 +8,9 @@ superlint is designed to be a **superset of all possible linters**. Rules are
 * codebase-scoped (as opposed to file or block scoped)
 * Defined by arbitary Go code
   * Language-agonstic
-  * Fast by default (lazy AST parsing)
+  * Fast by default 
+    * AST is parsed lazily
+    * Linters run concurrently
   * Capable of using the network, filesystem, etc.
   * Composable
 

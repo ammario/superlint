@@ -1,12 +1,15 @@
 package superlint
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 	"sync/atomic"
 
 	"github.com/coder/flog"
@@ -26,8 +29,9 @@ type FileInfo struct {
 	Path string
 }
 
-func (rn *Runner) runRule(files []FileInfo, r Rule) error {
+func (rn *Runner) runRule(w io.Writer, files []FileInfo, r Rule) error {
 	log := rn.DebugLogger.WithPrefix("%v: ", r.Name)
+	log.W = w
 
 	if r.Linter == nil {
 		return fmt.Errorf("no validator configured")
@@ -40,13 +44,13 @@ func (rn *Runner) runRule(files []FileInfo, r Rule) error {
 	return r.Linter(matchedFiles, func(ref FileReference, message string) {
 		atomic.AddInt64(&rn.failed, 1)
 
-		fmt.Printf("%v: %v: %v\n", r.Name, ref.Name, message)
+		fmt.Fprintf(w, "%v: %v: %v\n", r.Name, ref.Name, message)
 		file, err := ioutil.ReadFile(ref.Name)
 		if err != nil {
 			log.Error("read %v: %v", ref.Name, err)
 			return
 		}
-		prettyPrintReference(os.Stdout, file, ref)
+		prettyPrintReference(w, file, ref)
 	})
 }
 
@@ -89,12 +93,27 @@ func (rn *Runner) Run(rs *RuleSet) error {
 	}
 
 	rn.DebugLogger.Info("%s matched %v files", rn.Matcher, len(matches))
+	var (
+		stdoutMu sync.Mutex
+	)
+	var wg sync.WaitGroup
 	for _, r := range *rs {
-		err := rn.runRule(matches, r)
-		if err != nil {
-			rn.Log.Error("%v: %v", r.Name, err)
-		}
+		r := r
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			var out bytes.Buffer
+			err := rn.runRule(&out, matches, r)
+			if err != nil {
+				rn.Log.Error("%v: %v", r.Name, err)
+			}
+			stdoutMu.Lock()
+			out.WriteTo(os.Stdout)
+			stdoutMu.Unlock()
+		}()
 	}
+	wg.Wait()
 	if rn.failed > 0 {
 		return fmt.Errorf("%v violations found", rn.failed)
 	}
