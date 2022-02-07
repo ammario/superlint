@@ -10,6 +10,7 @@ superlint is designed to be a **superset of all possible linters**. Rules are
   * Language-agonstic
   * Fast by default (lazy AST parsing)
   * Capable of using the network, filesystem, etc.
+  * Composable
 
 The vast ecosystem of existing linters can be called by a `superlint` ruleset. For example, a rule
 can import an AST parser or execute a linting command.
