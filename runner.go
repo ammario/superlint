@@ -44,7 +44,16 @@ func (rn *Runner) runRule(w io.Writer, files []FileInfo, r Rule) error {
 	return r.Linter(matchedFiles, func(ref FileReference, message string) {
 		atomic.AddInt64(&rn.failed, 1)
 
+		info, err := os.Stat(ref.Name)
+		if err != nil {
+			panic(err)
+		}
+
 		fmt.Fprintf(w, "%v: %v: %v\n", r.Name, ref.Name, message)
+		if info.IsDir() {
+			return
+		}
+
 		file, err := ioutil.ReadFile(ref.Name)
 		if err != nil {
 			log.Error("read %v: %v", ref.Name, err)
