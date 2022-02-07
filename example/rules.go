@@ -1,8 +1,6 @@
 package main
 
 import (
-	"go/ast"
-	"go/token"
 	"os"
 	"regexp"
 	"strings"
@@ -12,10 +10,11 @@ import (
 	"github.com/coder/flog"
 )
 
+// LoadRules is the symbol loaded by superlint to inject rules.
 var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
+	// `no-dog-files` rule uses no language awareness, and simply checks if `dog` exists in the filename.
 	r.Add(Rule{
-		Name:        "no-dog-files",
-		FileMatcher: ShellMatch("example/*.go"),
+		Name: "no-dog-files",
 		Validator: Single(func(fi *os.File, report ReportFunc) error {
 			if strings.Contains(fi.Name(), "dog") {
 				report(FileReference{}, "no dogs allowed!")
@@ -24,38 +23,17 @@ var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
 		}),
 	})
 
-	r.Add(Rule{
-		Name:        "no-zebra-functions",
-		FileMatcher: ShellMatch("example/*.go"),
-		Validator: Single(lintgo.Validate(func(fset *token.FileSet, goFile *ast.File, _ *os.File, report ReportFunc) error {
-			ast.Inspect(goFile, func(node ast.Node) bool {
-				funcCall, ok := node.(*ast.FuncDecl)
-				if !ok {
-					return true
-				}
-				funcName := funcCall.Name.Name
-				if strings.Contains(funcName, "zebra") {
-					report(
-						FileReference{Pos: fset.Position(node.Pos()), End: fset.Position(node.End())},
-						"no zebra allowed in a function name",
-					)
-				}
-				return true
-			})
-			return nil
-		}),
-		),
-	})
-
+	// `no-md5` demonstrates how language-aware features are possible in this paradigm.
+	// lintgo is a simple wrapper around Go AST parsing.
 	r.Add(Rule{
 		Name:        "no-md5",
 		FileMatcher: regexp.MustCompile(`\.go$`).MatchString,
-		Validator: Single(lintgo.Validate(func(fset *token.FileSet, goFile *ast.File, _ *os.File, report ReportFunc) error {
-			for _, spec := range goFile.Imports {
+		Validator: Single(lintgo.Validate(func(ps *lintgo.ParseState, _ *os.File, report ReportFunc) error {
+			for _, spec := range ps.File.Imports {
 				if spec.Path.Value == "\"crypto/md5\"" {
 					report(FileReference{
-						Pos: fset.Position(spec.Path.Pos()),
-						End: fset.Position(spec.Path.End()),
+						Pos: ps.Fset.Position(spec.Path.Pos()).Offset,
+						End: ps.Fset.Position(spec.Path.End()).Offset,
 					}, "crypto/md5 is insecure")
 				}
 			}

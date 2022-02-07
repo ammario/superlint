@@ -10,7 +10,7 @@ import (
 // It prints each line related to the violation and underlines the specific reference.
 func prettyPrintReference(w io.Writer, fi []byte, reference FileReference) {
 	// If the reference is beyond the length of the file, we have nothing to do.
-	if reference.Pos.Offset >= len(fi) || reference.Pos.Offset >= len(fi) {
+	if reference.Pos >= len(fi) || reference.Pos >= len(fi) {
 		return
 	}
 	if reference.Pos == reference.End {
@@ -29,9 +29,9 @@ func prettyPrintReference(w io.Writer, fi []byte, reference FileReference) {
 		}
 		// Write the current line
 		switch {
-		case i == reference.Pos.Offset:
+		case i == reference.Pos:
 			linesToWrite = append(linesToWrite, len(lines))
-		case i > reference.Pos.Offset && i < reference.End.Offset && linesToWrite[len(linesToWrite)-1] != len(lines):
+		case i > reference.Pos && i < reference.End && linesToWrite[len(linesToWrite)-1] != len(lines):
 			linesToWrite = append(linesToWrite, len(lines))
 		}
 	}

@@ -29,10 +29,12 @@ func (rn *Runner) runRule(files []string, r Rule) error {
 
 	matchedFiles := make(map[string]*os.File)
 	for _, fileName := range files {
-		ok := r.FileMatcher(fileName)
-		log.Info("match? %q: %v", fileName, ok)
-		if !ok {
-			continue
+		if r.FileMatcher != nil {
+			ok := r.FileMatcher(fileName)
+			log.Info("match? %q: %v", fileName, ok)
+			if !ok {
+				continue
+			}
 		}
 		fi, err := os.OpenFile(fileName, os.O_RDONLY, 0)
 		if err != nil {
