@@ -1,17 +1,17 @@
 # superlint
 
-`superlint` is an experimental language-agnostic framework for lint rules written in Go.
+`superlint` is an experimental, language-agnostic framework for lint rules written in Go.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/ammario/superlint.svg)](https://pkg.go.dev/github.com/ammario/superlint)
 
-It is designed to be a **superset of all possible linters**. Rules are
-* codebase-scoped (as opposed to file-scoped)
+superlint is designed to be a **superset of all possible linters**. Rules are
+* codebase-scoped (as opposed to file or block scoped)
 * Defined by arbitary Go code
-  * Language-agonistic
+  * Language-agonstic
   * Fast by default (lazy AST parsing)
   * Capable of using the network, filesystem, etc.
 
-The vast ecosystem of existing linters can be seamlessly interwoven into a `superlint` ruleset. For example, a rule
+The vast ecosystem of existing linters can be called by a `superlint` ruleset. For example, a rule
 can import an AST parser or execute a linting command.
 
 `superlint` makes it easy to enforce arbitrary codebase-wide rules. For example, you may enforce that:
