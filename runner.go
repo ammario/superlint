@@ -1,9 +1,7 @@
 package superlint
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -21,6 +19,8 @@ type Runner struct {
 	DebugLogger *flog.Logger
 	Log         *flog.Logger
 	failed      int64
+
+	stderrMu sync.Mutex
 }
 
 // FileInfo is an os.FileInfo combined with a fully qualified path.
@@ -29,9 +29,8 @@ type FileInfo struct {
 	Path string
 }
 
-func (rn *Runner) runRule(w io.Writer, files []FileInfo, r Rule) error {
+func (rn *Runner) runRule(files []FileInfo, r Rule) error {
 	log := rn.DebugLogger.WithPrefix("%v: ", r.Name)
-	log.W = w
 
 	if r.Linter == nil {
 		return fmt.Errorf("no validator configured")
@@ -49,14 +48,18 @@ func (rn *Runner) runRule(w io.Writer, files []FileInfo, r Rule) error {
 			panic(err)
 		}
 
-		fmt.Fprintf(w, "%v: %v: %v\n", r.Name, ref.Name, message)
-		if info.IsDir() {
-			return
-		}
-
 		file, err := ioutil.ReadFile(ref.Name)
 		if err != nil {
 			log.Error("read %v: %v", ref.Name, err)
+			return
+		}
+
+		rn.stderrMu.Lock()
+		defer rn.stderrMu.Unlock()
+
+		w := os.Stderr
+		fmt.Fprintf(w, "%v: %v: %v\n", r.Name, ref.Name, message)
+		if info.IsDir() {
 			return
 		}
 		prettyPrintReference(w, file, ref)
@@ -102,9 +105,7 @@ func (rn *Runner) Run(rs *RuleSet) error {
 	}
 
 	rn.DebugLogger.Info("%s matched %v files", rn.Matcher, len(matches))
-	var (
-		stdoutMu sync.Mutex
-	)
+	var ()
 	var wg sync.WaitGroup
 	for _, r := range *rs {
 		r := r
@@ -112,14 +113,10 @@ func (rn *Runner) Run(rs *RuleSet) error {
 		go func() {
 			defer wg.Done()
 
-			var out bytes.Buffer
-			err := rn.runRule(&out, matches, r)
+			err := rn.runRule(matches, r)
 			if err != nil {
 				rn.Log.Error("%v: %v", r.Name, err)
 			}
-			stdoutMu.Lock()
-			out.WriteTo(os.Stdout)
-			stdoutMu.Unlock()
 		}()
 	}
 	wg.Wait()
