@@ -15,7 +15,7 @@ func Single(vf SingleValidator) ValidatorFunc {
 	return func(files map[string]FileInfo, report ReportFunc) error {
 		for _, file := range files {
 			err := vf(file, func(reference FileReference, message string) {
-				reference.Name = file.Name()
+				reference.Name = file.Path
 				report(reference, message)
 			})
 			if err != nil {
