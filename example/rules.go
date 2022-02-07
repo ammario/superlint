@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"strings"
 
 	. "github.com/ammario/superlint"
@@ -28,7 +27,7 @@ var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
 	r.Add(Rule{
 		Name: "no-md5",
 		// lintgo is a simple wrapper around Go AST parsing.
-		Linter: Single(lintgo.Validate(func(ps *lintgo.ParseState, _ os.FileInfo, report ReportFunc) error {
+		Linter: Single(lintgo.Validate(func(ps *lintgo.ParseState, _ FileInfo, report ReportFunc) error {
 			for _, spec := range ps.File.Imports {
 				if spec.Path.Value == "\"crypto/md5\"" {
 					report(FileReference{
