@@ -12,9 +12,11 @@ import (
 
 // LoadRules is the symbol loaded by superlint to inject rules.
 var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
-	// `no-dog-files` rule uses no language awareness, and simply checks if `dog` exists in the filename.
+	// `no-dog-files` checks if `dog` exists in the filename.
 	r.Add(Rule{
 		Name: "no-dog-files",
+		// "Single" here means that the rule does not need codebase-wide state.
+		// Omit "Single" to receive all matching files.
 		Validator: Single(func(fi *os.File, report ReportFunc) error {
 			if strings.Contains(fi.Name(), "dog") {
 				report(FileReference{}, "no dogs allowed!")
@@ -23,11 +25,11 @@ var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
 		}),
 	})
 
-	// `no-md5` demonstrates how language-aware features are possible in this paradigm.
-	// lintgo is a simple wrapper around Go AST parsing.
+	// `no-md5` shows how language-awareness is possible in this paradigm.
 	r.Add(Rule{
 		Name:        "no-md5",
 		FileMatcher: regexp.MustCompile(`\.go$`).MatchString,
+		// lintgo is a simple wrapper around Go AST parsing.
 		Validator: Single(lintgo.Validate(func(ps *lintgo.ParseState, _ *os.File, report ReportFunc) error {
 			for _, spec := range ps.File.Imports {
 				if spec.Path.Value == "\"crypto/md5\"" {

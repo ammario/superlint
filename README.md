@@ -4,11 +4,12 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/ammario/superlint.svg)](https://pkg.go.dev/github.com/ammario/superlint)
 
-It is designed to be a _super_set of all possible linters. Rules are
-* **codebase-scoped** (as opposed to file-scoped)
-* Defined by arbitary code
-  * **language-agonistic**
+It is designed to be a **superset of all possible linters**. Rules are
+* codebase-scoped (as opposed to file-scoped)
+* Defined by arbitary Go code
+  * Language-agonistic
   * Fast by default (lazy AST parsing)
+  * Capable of using the network, filesystem, etc.
 
 The vast ecosystem of existing linters can be seamlessly interwoven into a `superlint` ruleset. For example, a rule
 can import an AST parser or execute a linting command.
@@ -22,7 +23,7 @@ can import an AST parser or execute a linting command.
 
 ## Basic Usage
 
-1. Create a rules file (e.g `superlint/rules.go`)
+1. Create a rules file in your project (e.g `example/rules.go`)
 
 ```go
 package main
@@ -39,43 +40,44 @@ import (
 
 // LoadRules is the symbol loaded by superlint to inject rules.
 var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
-	// `no-dog-files` rule uses no language awareness, and simply checks if `dog` exists in the filename.
-	r.Add(Rule{
-		Name: "no-dog-files",
-		Validator: Single(func(fi *os.File, report ReportFunc) error {
-			if strings.Contains(fi.Name(), "dog") {
-				report(FileReference{}, "no dogs allowed!")
-			}
-			return nil
-		}),
-	})
+  // `no-dog-files` checks if `dog` exists in the filename.
+  r.Add(Rule{
+    Name: "no-dog-files",
+    // "Single" here means that the rule does not need codebase-wide state.
+    // Omit "Single" to receive all matching files.
+    Validator: Single(func(fi *os.File, report ReportFunc) error {
+      if strings.Contains(fi.Name(), "dog") {
+        report(FileReference{}, "no dogs allowed!")
+      }
+      return nil
+    }),
+  })
 
-	// `no-md5` demonstrates how language-aware features are possible in this paradigm.
-	// lintgo is a simple wrapper around Go AST parsing.
-	r.Add(Rule{
-		Name:        "no-md5",
-		FileMatcher: regexp.MustCompile(`\.go$`).MatchString,
-		Validator: Single(lintgo.Validate(func(ps *lintgo.ParseState, _ *os.File, report ReportFunc) error {
-			for _, spec := range ps.File.Imports {
-				if spec.Path.Value == "\"crypto/md5\"" {
-					report(FileReference{
-						Pos: ps.Fset.Position(spec.Path.Pos()).Offset,
-						End: ps.Fset.Position(spec.Path.End()).Offset,
-					}, "crypto/md5 is insecure")
-				}
-			}
-			return nil
-		}),
-		),
-	})
+  // `no-md5` shows how language-awareness is possible in this paradigm.
+  r.Add(Rule{
+    Name:        "no-md5",
+    FileMatcher: regexp.MustCompile(`\.go$`).MatchString,
+    // lintgo is a simple wrapper around Go AST parsing.
+    Validator: Single(lintgo.Validate(func(ps *lintgo.ParseState, _ *os.File, report ReportFunc) error {
+      for _, spec := range ps.File.Imports {
+        if spec.Path.Value == "\"crypto/md5\"" {
+          report(FileReference{
+            Pos: ps.Fset.Position(spec.Path.Pos()).Offset,
+            End: ps.Fset.Position(spec.Path.End()).Offset,
+          }, "crypto/md5 is insecure")
+        }
+      }
+      return nil
+    }),
+    ),
+  })
 }
-
 ```
 
 2. Run the rules
 
 ```bash
-I ~/P/a/superlint (master * =) go build -buildmode=plugin -o rules.so example/rules.go && go run github.com/ammario/superlint/cmd/superlint rules.so
+$ go build -buildmode=plugin -o rules.so example/rules.go && go run github.com/ammario/superlint/cmd/superlint rules.so
 [18:05:36.552] loaded 2 rules
 no-dog-files: example/dogs.go: no dogs allowed!
 no-md5: example/dogs.go: crypto/md5 is insecure
@@ -89,5 +91,5 @@ exit status 1
 
 ## Architecture
 
-`superlint` loads your ruleset as a Go plugin. This way `superlint` supports customizable lint rules without direct
-integration with a build toolchain.
+`superlint` loads your ruleset as a Go plugin. This is the only way `superlint` can support arbitrary Go lint rules
+without direct integration with a build toolchain.
