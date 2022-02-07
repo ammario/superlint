@@ -14,6 +14,9 @@ type Rule struct {
 type RuleSet []Rule
 
 // Add adds a new rule to the RuleSet.
-func (rs *RuleSet) Add(r Rule) {
-	*rs = append(*rs, r)
+func (rs *RuleSet) Add(name string, lint ValidatorFunc) {
+	*rs = append(*rs, Rule{
+		Name:   name,
+		Linter: lint,
+	})
 }

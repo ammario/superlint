@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"plugin"
+	"strings"
 
 	"github.com/ammario/superlint"
 	"github.com/coder/flog"
@@ -22,7 +24,37 @@ func main() {
 			if len(args) == 2 {
 				matcher = args[1]
 			}
-			pl, err := plugin.Open(args[0])
+			var pluginPath = args[0]
+			pluginStat, err := os.Stat(pluginPath)
+			if err != nil {
+				return err
+			}
+
+			log := &flog.Logger{
+				W:          os.Stderr,
+				TimeFormat: flog.ClockFormat + ".000",
+			}
+
+			// Compile ourselves
+			if pluginStat.IsDir() || strings.HasSuffix(pluginStat.Name(), ".go") {
+				log.Info("building plugin")
+				fi, err := ioutil.TempFile("", "superlint-plugin")
+				if err != nil {
+					panic(err)
+				}
+				defer os.Remove(fi.Name())
+
+				cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", fi.Name(), pluginPath)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				err = cmd.Run()
+				if err != nil {
+					log.Fatal("%v", err)
+				}
+				pluginPath = fi.Name()
+			}
+
+			pl, err := plugin.Open(pluginPath)
 			if err != nil {
 				return fmt.Errorf("open %v: %w", args[0], err)
 			}
@@ -36,11 +68,6 @@ func main() {
 			loader, ok := sym.(*superlint.Loader)
 			if !ok {
 				return fmt.Errorf("loader not of type superlint.Loader")
-			}
-
-			log := &flog.Logger{
-				W:          os.Stderr,
-				TimeFormat: flog.ClockFormat + ".000",
 			}
 
 			rn := superlint.Runner{
