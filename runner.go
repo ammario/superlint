@@ -20,30 +20,24 @@ type Runner struct {
 	failed      int64
 }
 
-func (rn *Runner) runRule(files []string, r Rule) error {
+// FileInfo is an os.FileInfo combined with a fully qualified path.
+type FileInfo struct {
+	os.FileInfo
+	Path string
+}
+
+func (rn *Runner) runRule(files []FileInfo, r Rule) error {
 	log := rn.DebugLogger.WithPrefix("%v: ", r.Name)
 
-	if r.Validator == nil {
+	if r.Linter == nil {
 		return fmt.Errorf("no validator configured")
 	}
 
-	matchedFiles := make(map[string]*os.File)
-	for _, fileName := range files {
-		if r.FileMatcher != nil {
-			ok := r.FileMatcher(fileName)
-			log.Info("match? %q: %v", fileName, ok)
-			if !ok {
-				continue
-			}
-		}
-		fi, err := os.OpenFile(fileName, os.O_RDONLY, 0)
-		if err != nil {
-			return fmt.Errorf("open %v: %w", fileName, err)
-		}
-		defer fi.Close()
-		matchedFiles[fileName] = fi
+	matchedFiles := make(map[string]FileInfo)
+	for _, finfo := range files {
+		matchedFiles[finfo.Name()] = finfo
 	}
-	return r.Validator(matchedFiles, func(ref FileReference, message string) {
+	return r.Linter(matchedFiles, func(ref FileReference, message string) {
 		atomic.AddInt64(&rn.failed, 1)
 
 		fmt.Printf("%v: %v: %v\n", r.Name, ref.Name, message)
@@ -57,7 +51,7 @@ func (rn *Runner) runRule(files []string, r Rule) error {
 }
 
 func (rn *Runner) Run(rs *RuleSet) error {
-	var matches []string
+	var matches []FileInfo
 	matchRegex, err := regexp.Compile(rn.Matcher)
 	if err != nil {
 		return fmt.Errorf("compile matcher: %w", err)
@@ -79,7 +73,14 @@ func (rn *Runner) Run(rs *RuleSet) error {
 		}
 
 		if matchRegex.MatchString(path) {
-			matches = append(matches, path)
+			finfo, err := os.Stat(path)
+			if err != nil {
+				return err
+			}
+			matches = append(matches, FileInfo{
+				FileInfo: finfo,
+				Path:     path,
+			})
 		}
 		return nil
 	})
