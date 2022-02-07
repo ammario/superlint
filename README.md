@@ -46,7 +46,7 @@ var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
     Name: "no-dog-files",
     // "Single" here means that the rule does not need codebase-wide state.
     // Omit "Single" to receive all matching files.
-    Validator: Single(func(fi *os.File, report ReportFunc) error {
+    Linter: Single(func(fi FileInfo, report ReportFunc) error {
       if strings.Contains(fi.Name(), "dog") {
         report(FileReference{}, "no dogs allowed!")
       }
@@ -56,10 +56,9 @@ var LoadRules Loader = func(_ *flog.Logger, r *RuleSet) {
 
   // `no-md5` shows how language-awareness is possible in this paradigm.
   r.Add(Rule{
-    Name:        "no-md5",
-    FileMatcher: regexp.MustCompile(`\.go$`).MatchString,
+    Name: "no-md5",
     // lintgo is a simple wrapper around Go AST parsing.
-    Validator: Single(lintgo.Validate(func(ps *lintgo.ParseState, _ *os.File, report ReportFunc) error {
+    Linter: Single(lintgo.Validate(func(ps *lintgo.ParseState, _ FileInfo, report ReportFunc) error {
       for _, spec := range ps.File.Imports {
         if spec.Path.Value == "\"crypto/md5\"" {
           report(FileReference{
