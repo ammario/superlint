@@ -4,8 +4,9 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/ammario/superlint.svg)](https://pkg.go.dev/github.com/ammario/superlint)
 
-superlint is designed to be a **superset of all possible linters**. Rules are
-* codebase-scoped (as opposed to file or block scoped)
+superlint is designed to be a higher order linter. You can embed other linters or define custom rules.
+Rules are 
+* Codebase-scoped (as opposed to file or block scoped)
 * Defined by arbitary Go code
   * Language-agonstic
   * Fast by default 
